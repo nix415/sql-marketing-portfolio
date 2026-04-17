@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Marketing Analytics Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <span class="badge">Portfolio Project</span>
+        <h1>SQL Marketing <span class="accent">Analytics</span></h1>
+        <p>Five end-to-end analyses built on a 1,000-row customer segmentation dataset, demonstrating the SQL skills used in growth marketing and marketing analytics roles.</p>
+        <div class="hero-links">
+          <a href="#analyses" class="btn-primary">View Analyses</a>
+          <!-- TODO: Replace with your Tableau Public profile URL -->
+          <a href="PASTE_YOUR_TABLEAU_PUBLIC_URL_HERE" class="btn-outline" target="_blank" rel="noopener">Tableau Dashboard</a>
+          <a href="https://github.com/YOUR_GITHUB_USERNAME/sql-marketing-portfolio" class="btn-outline" target="_blank" rel="noopener">GitHub Repo</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DATASET OVERVIEW ============ -->
+  <section id="dataset">
+    <div class="container">
+      <p class="section-label">Dataset</p>
+      <h2 class="section-title">Customer Segmentation Data for Marketing Analysis</h2>
+      <p class="section-desc">A synthetic dataset of 1,000 customers with demographics, purchase behavior, and engagement scores. Queried with SQLite via DB Browser for SQLite.</p>
+      <div class="dataset-grid">
+        <div class="stat-card">
+          <p class="label">Customers</p>
+          <p class="value">1,000</p>
+        </div>
+        <div class="stat-card">
+          <p class="label">Columns</p>
+          <p class="value">9</p>
+        </div>
+        <div class="stat-card">
+          <p class="label">Analyses</p>
+          <p class="value">5</p>
+        </div>
+        <div class="stat-card">
+          <p class="label">SQL Queries</p>
+          <p class="value">17</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ANALYSES ============ -->
+  <section id="analyses">
+    <div class="container">
+      <p class="section-label">Analyses</p>
+      <h2 class="section-title">Deep Dives</h2>
+      <p class="section-desc">Each analysis mirrors a real marketing reporting workflow, from traffic acquisition through RFM segmentation.</p>
+
+      <!-- ---- 01 Traffic & Acquisition ---- -->
+      <div class="analysis-card">
+        <div class="card-header">
+          <p class="card-number">Analysis 01</p>
+          <h3>Traffic &amp; Acquisition</h3>
+          <p>Understand where customers come from by analyzing demographic segments and preferred shopping categories. Treats <code>preferred_category</code> as the acquisition channel and age group as the traffic source.</p>
+          <div class="tags">
+            <span class="tag">CTEs</span>
+            <span class="tag">CROSS JOIN</span>
+            <span class="tag">Percentage calculations</span>
+            <span class="tag">CASE</span>
+          </div>
+        </div>
+        <div class="tableau-embed" id="tableau-01">
+          <!--
+            TODO: Replace placeholder with Tableau embed.
+            Example: <iframe src="https://public.tableau.com/views/YOUR_WORKBOOK/Sheet1?:embed=y&:display_count=no"></iframe>
+          -->
+          <div class="placeholder"><span>📊</span>Tableau dashboard embed — see instructions in the HTML comment above</div>
+        </div>
+        <button class="sql-toggle" onclick="toggleSQL(this)">
+          <span class="arrow">&#9654;</span> View SQL
+        </button>
+        <div class="sql-body">
+          <pre><code class="language-sql">-- 1A: Customer distribution by preferred category (channel proxy)
+
+WITH category_counts AS (
+    SELECT
+        preferred_category,
+        COUNT(*)                AS customer_count,
+        ROUND(AVG(income), 2)   AS avg_income,
+        ROUND(AVG(spending_score), 2) AS avg_spending_score,
+        ROUND(AVG(last_purchase_amount), 2) AS avg_last_purchase
+    FROM customers
+    GROUP BY preferred_category
+),
+total AS (
+    SELECT SUM(customer_count) AS total_customers
+    FROM category_counts
+)
+SELECT
+    cc.preferred_category           AS channel,
+    cc.customer_count,
+    ROUND(cc.customer_count * 100.0 / t.total_customers, 1)
+                                     AS pct_of_total,
+    cc.avg_income,
+    cc.avg_spending_score,
+    cc.avg_last_purchase
+FROM category_counts cc
+CROSS JOIN total t
+ORDER BY cc.customer_count DESC;
+
+-- 1B: Acquisition breakdown by age group within each category
+
+WITH age_segments AS (
+    SELECT
+        *,
+        CASE
+            WHEN age &lt; 25            THEN '18-24'
+            WHEN age BETWEEN 25 AND 34 THEN '25-34'
+            WHEN age BETWEEN 35 AND 44 THEN '35-44'
+            WHEN age BETWEEN 45 AND 54 THEN '45-54'
+            ELSE '55+'
+        END AS age_group
+    FROM customers
+),
+segment_summary AS (
+    SELECT
+        preferred_category,
+        age_group,
+        COUNT(*)               AS customer_count,
+        ROUND(AVG(income), 2)  AS avg_income,
+        ROUND(AVG(purchase_frequency), 1) AS avg_purchase_freq
+    FROM age_segments
+    GROUP BY preferred_category, age_group
+),
+category_totals AS (
+    SELECT preferred_category, SUM(customer_count) AS cat_total
+    FROM segment_summary
+    GROUP BY preferred_category
+)
+SELECT
+    ss.preferred_category           AS channel,
+    ss.age_group                    AS source_segment,
+    ss.customer_count,
+    ROUND(ss.customer_count * 100.0 / ct.cat_total, 1)
+                                     AS pct_within_channel,
+    ss.avg_income,
+    ss.avg_purchase_freq
+FROM segment_summary ss
+JOIN category_totals ct
+  ON ss.preferred_category = ct.preferred_category
+ORDER BY ss.preferred_category, ss.customer_count DESC;
+
+-- 1C: Gender split per category
+
+SELECT
+    preferred_category              AS channel,
+    gender,
+    COUNT(*)                        AS customer_count,
+    ROUND(AVG(spending_score), 1)   AS avg_spending_score,
+    ROUND(AVG(last_purchase_amount), 2) AS avg_last_purchase
+FROM customers
+GROUP BY preferred_category, gender
+ORDER BY preferred_category, customer_count DESC;</code></pre>
+        </div>
+      </div>
+
+      <!-- ---- 02 Funnel Conversion ---- -->
+      <div class="analysis-card">
+        <div class="card-header">
+          <p class="card-number">Analysis 02</p>
+          <h3>Funnel Conversion</h3>
+          <p>Model a marketing funnel using behavioral thresholds: All Users &rarr; Engaged (score &ge; 40) &rarr; Active Buyers (freq &ge; 15) &rarr; High-Value (amount &ge; $75). Identifies where the funnel leaks most.</p>
+          <div class="tags">
+            <span class="tag">Conditional aggregation</span>
+            <span class="tag">Multi-stage SUM/CASE</span>
+            <span class="tag">Drop-off rates</span>
+          </div>
+        </div>
+        <div class="tableau-embed" id="tableau-02">
+          <div class="placeholder"><span>📊</span>Tableau dashboard embed — see instructions in the HTML comment above</div>
+        </div>
+        <button class="sql-toggle" onclick="toggleSQL(this)">
+          <span class="arrow">&#9654;</span> View SQL
+        </button>
+        <div class="sql-body">
+          <pre><code class="language-sql">-- 2A: Overall funnel with stage counts and drop-off rates
+
+WITH funnel AS (
+    SELECT
+        COUNT(*) AS stage_1_all_users,
+        SUM(CASE WHEN spending_score &gt;= 40
+                 THEN 1 ELSE 0 END)
+            AS stage_2_engaged,
+        SUM(CASE WHEN spending_score &gt;= 40
+                  AND purchase_frequency &gt;= 15
+                 THEN 1 ELSE 0 END)
+            AS stage_3_active_buyers,
+        SUM(CASE WHEN spending_score &gt;= 40
+                  AND purchase_frequency &gt;= 15
+                  AND last_purchase_amount &gt;= 75
+                 THEN 1 ELSE 0 END)
+            AS stage_4_high_value
+    FROM customers
+)
+SELECT
+    stage_1_all_users,
+    stage_2_engaged,
+    ROUND(stage_2_engaged * 100.0 / stage_1_all_users, 1)
+        AS pct_engaged,
+    ROUND((stage_1_all_users - stage_2_engaged) * 100.0
+        / stage_1_all_users, 1) AS drop_off_1_to_2,
+    stage_3_active_buyers,
+    ROUND(stage_3_active_buyers * 100.0 / stage_2_engaged, 1)
+        AS pct_engaged_to_active,
+    ROUND((stage_2_engaged - stage_3_active_buyers) * 100.0
+        / stage_2_engaged, 1) AS drop_off_2_to_3,
+    stage_4_high_value,
+    ROUND(stage_4_high_value * 100.0 / stage_3_active_buyers, 1)
+        AS pct_active_to_highval,
+    ROUND((stage_3_active_buyers - stage_4_high_value) * 100.0
+        / stage_3_active_buyers, 1) AS drop_off_3_to_4
+FROM funnel;
+
+-- 2B: Funnel breakdown by preferred category
+
+WITH category_funnel AS (
+    SELECT
+        preferred_category,
+        COUNT(*) AS total,
+        SUM(CASE WHEN spending_score &gt;= 40
+                 THEN 1 ELSE 0 END) AS engaged,
+        SUM(CASE WHEN spending_score &gt;= 40
+                  AND purchase_frequency &gt;= 15
+                 THEN 1 ELSE 0 END) AS active_buyers,
+        SUM(CASE WHEN spending_score &gt;= 40
+                  AND purchase_frequency &gt;= 15
+                  AND last_purchase_amount &gt;= 75
+                 THEN 1 ELSE 0 END) AS high_value
+    FROM customers
+    GROUP BY preferred_category
+)
+SELECT
+    preferred_category,
+    total,
+    engaged,
+    ROUND(engaged * 100.0 / total, 1)           AS engaged_rate,
+    active_buyers,
+    ROUND(active_buyers * 100.0 / engaged, 1)   AS active_rate,
+    high_value,
+    ROUND(high_value * 100.0 / active_buyers, 1) AS high_value_rate
+FROM category_funnel
+ORDER BY high_value_rate DESC;
+
+-- 2C: Funnel by gender
+
+WITH gender_funnel AS (
+    SELECT
+        gender,
+        COUNT(*) AS total,
+        SUM(CASE WHEN spending_score &gt;= 40 THEN 1 ELSE 0 END) AS engaged,
+        SUM(CASE WHEN spending_score &gt;= 40
+                  AND purchase_frequency &gt;= 15 THEN 1 ELSE 0 END) AS active_buyers,
+        SUM(CASE WHEN spending_score &gt;= 40
+                  AND purchase_frequency &gt;= 15
+                  AND last_purchase_amount &gt;= 75 THEN 1 ELSE 0 END) AS high_value
+    FROM customers
+    GROUP BY gender
+)
+SELECT
+    gender,
+    total,
+    ROUND(engaged * 100.0 / total, 1)            AS engaged_rate,
+    ROUND(active_buyers * 100.0 / engaged, 1)    AS active_to_buyer_rate,
+    ROUND(high_value * 100.0 / active_buyers, 1) AS buyer_to_highval_rate
+FROM gender_funnel
+ORDER BY buyer_to_highval_rate DESC;</code></pre>
+        </div>
+      </div>
+
+      <!-- ---- 03 Cohort Retention ---- -->
+      <div class="analysis-card">
+        <div class="card-header">
+          <p class="card-number">Analysis 03</p>
+          <h3>Cohort Retention</h3>
+          <p>Group customers by membership tenure as a signup-cohort proxy. Analyze how engagement, spending, and purchase behavior differ across cohorts — mirroring classic month-over-month retention tables.</p>
+          <div class="tags">
+            <span class="tag">Cohort grouping</span>
+            <span class="tag">Retention rate calculation</span>
+            <span class="tag">Cross-tabs</span>
+          </div>
+        </div>
+        <div class="tableau-embed" id="tableau-03">
+          <div class="placeholder"><span>📊</span>Tableau dashboard embed — see instructions in the HTML comment above</div>
+        </div>
+        <button class="sql-toggle" onclick="toggleSQL(this)">
+          <span class="arrow">&#9654;</span> View SQL
+        </button>
+        <div class="sql-body">
+          <pre><code class="language-sql">-- 3A: Membership-year cohort summary
+
+WITH cohort_metrics AS (
+    SELECT
+        membership_years              AS cohort_year,
+        COUNT(*)                      AS cohort_size,
+        ROUND(AVG(purchase_frequency), 1) AS avg_purchase_freq,
+        ROUND(AVG(spending_score), 1)     AS avg_spending_score,
+        ROUND(AVG(last_purchase_amount), 2) AS avg_last_purchase,
+        ROUND(AVG(income), 2)             AS avg_income
+    FROM customers
+    GROUP BY membership_years
+)
+SELECT
+    cohort_year, cohort_size, avg_purchase_freq,
+    avg_spending_score, avg_last_purchase, avg_income
+FROM cohort_metrics
+ORDER BY cohort_year;
+
+-- 3B: Retention proxy — % of each cohort that remains "active"
+-- "Retained" = purchase_frequency >= 20
+
+WITH retention AS (
+    SELECT
+        membership_years             AS cohort_year,
+        COUNT(*)                     AS cohort_size,
+        SUM(CASE WHEN purchase_frequency &gt;= 20
+                 THEN 1 ELSE 0 END) AS retained_customers
+    FROM customers
+    GROUP BY membership_years
+)
+SELECT
+    cohort_year, cohort_size, retained_customers,
+    ROUND(retained_customers * 100.0 / cohort_size, 1)
+        AS retention_rate_pct
+FROM retention
+ORDER BY cohort_year;
+
+-- 3C: Cohort x category cross-tab
+
+WITH cohort_category AS (
+    SELECT
+        membership_years              AS cohort_year,
+        preferred_category,
+        COUNT(*)                      AS customer_count,
+        ROUND(AVG(last_purchase_amount), 2) AS avg_order_value
+    FROM customers
+    GROUP BY membership_years, preferred_category
+),
+cohort_totals AS (
+    SELECT cohort_year, SUM(customer_count) AS cohort_total
+    FROM cohort_category
+    GROUP BY cohort_year
+)
+SELECT
+    cc.cohort_year, cc.preferred_category,
+    cc.customer_count,
+    ROUND(cc.customer_count * 100.0 / ct.cohort_total, 1)
+        AS pct_of_cohort,
+    cc.avg_order_value
+FROM cohort_category cc
+JOIN cohort_totals ct ON cc.cohort_year = ct.cohort_year
+ORDER BY cc.cohort_year, cc.customer_count DESC;
+
+-- 3D: Spending score trend by tenure
+
+SELECT
+    membership_years              AS cohort_year,
+    MIN(spending_score)           AS min_score,
+    ROUND(AVG(spending_score), 1) AS avg_score,
+    MAX(spending_score)           AS max_score,
+    COUNT(*)                      AS n
+FROM customers
+GROUP BY membership_years
+ORDER BY membership_years;</code></pre>
+        </div>
+      </div>
+
+      <!-- ---- 04 Revenue & Campaign ROI ---- -->
+      <div class="analysis-card">
+        <div class="card-header">
+          <p class="card-number">Analysis 04</p>
+          <h3>Revenue &amp; Campaign ROI</h3>
+          <p>Break down revenue contribution and average order value by category, income tier, and demographic to help allocate budget to the highest-ROI segments.</p>
+          <div class="tags">
+            <span class="tag">NTILE window function</span>
+            <span class="tag">Revenue share</span>
+            <span class="tag">Efficiency metrics</span>
+          </div>
+        </div>
+        <div class="tableau-embed" id="tableau-04">
+          <div class="placeholder"><span>📊</span>Tableau dashboard embed — see instructions in the HTML comment above</div>
+        </div>
+        <button class="sql-toggle" onclick="toggleSQL(this)">
+          <span class="arrow">&#9654;</span> View SQL
+        </button>
+        <div class="sql-body">
+          <pre><code class="language-sql">-- 4A: Revenue by preferred category (channel-level view)
+
+WITH channel_revenue AS (
+    SELECT
+        preferred_category                  AS channel,
+        COUNT(*)                            AS customers,
+        SUM(last_purchase_amount)           AS total_revenue,
+        ROUND(AVG(last_purchase_amount), 2) AS avg_order_value,
+        ROUND(SUM(last_purchase_amount) * 1.0 /
+              SUM(purchase_frequency), 2)   AS revenue_per_transaction,
+        SUM(purchase_frequency)             AS total_transactions
+    FROM customers
+    GROUP BY preferred_category
+),
+grand_total AS (
+    SELECT SUM(total_revenue) AS overall_revenue FROM channel_revenue
+)
+SELECT
+    cr.channel, cr.customers, cr.total_revenue,
+    ROUND(cr.total_revenue * 100.0 / gt.overall_revenue, 1)
+        AS pct_of_revenue,
+    cr.avg_order_value, cr.revenue_per_transaction,
+    cr.total_transactions
+FROM channel_revenue cr
+CROSS JOIN grand_total gt
+ORDER BY cr.total_revenue DESC;
+
+-- 4B: Revenue by income tier (NTILE quartiles)
+
+WITH income_tiers AS (
+    SELECT *, NTILE(4) OVER (ORDER BY income) AS income_quartile
+    FROM customers
+)
+SELECT
+    CASE income_quartile
+        WHEN 1 THEN 'Q1 - Low Income'
+        WHEN 2 THEN 'Q2 - Mid-Low'
+        WHEN 3 THEN 'Q3 - Mid-High'
+        WHEN 4 THEN 'Q4 - High Income'
+    END                                   AS income_tier,
+    COUNT(*)                              AS customers,
+    ROUND(AVG(last_purchase_amount), 2)   AS avg_order_value,
+    SUM(last_purchase_amount)             AS total_revenue,
+    ROUND(AVG(purchase_frequency), 1)     AS avg_purchase_freq,
+    ROUND(AVG(spending_score), 1)         AS avg_spending_score
+FROM income_tiers
+GROUP BY income_quartile
+ORDER BY income_quartile;
+
+-- 4C: Top category x gender combinations by revenue
+
+SELECT
+    preferred_category                    AS channel,
+    gender,
+    COUNT(*)                              AS customers,
+    SUM(last_purchase_amount)             AS total_revenue,
+    ROUND(AVG(last_purchase_amount), 2)   AS avg_order_value,
+    ROUND(AVG(purchase_frequency), 1)     AS avg_freq
+FROM customers
+GROUP BY preferred_category, gender
+ORDER BY total_revenue DESC
+LIMIT 10;
+
+-- 4D: Revenue efficiency — revenue per membership year
+
+SELECT
+    membership_years,
+    COUNT(*)                              AS customers,
+    SUM(last_purchase_amount)             AS total_revenue,
+    ROUND(AVG(last_purchase_amount), 2)   AS avg_order_value,
+    ROUND(SUM(last_purchase_amount) * 1.0 / COUNT(*), 2)
+                                          AS revenue_per_customer,
+    ROUND(AVG(purchase_frequency), 1)     AS avg_purchase_freq
+FROM customers
+GROUP BY membership_years
+ORDER BY membership_years;</code></pre>
+        </div>
+      </div>
+
+      <!-- ---- 05 RFM Segmentation ---- -->
+      <div class="analysis-card">
+        <div class="card-header">
+          <p class="card-number">Analysis 05</p>
+          <h3>RFM Segmentation</h3>
+          <p>Classify every customer into High / Mid / Low value tiers using Recency, Frequency, and Monetary scoring with NTILE(3). Produces actionable segments for targeted campaigns.</p>
+          <div class="tags">
+            <span class="tag">NTILE(3)</span>
+            <span class="tag">Composite scoring</span>
+            <span class="tag">Tiered CASE logic</span>
+          </div>
+        </div>
+        <div class="tableau-embed" id="tableau-05">
+          <div class="placeholder"><span>📊</span>Tableau dashboard embed — see instructions in the HTML comment above</div>
+        </div>
+        <button class="sql-toggle" onclick="toggleSQL(this)">
+          <span class="arrow">&#9654;</span> View SQL
+        </button>
+        <div class="sql-body">
+          <pre><code class="language-sql">-- 5A: Assign R, F, M scores using NTILE(3)
+
+WITH rfm_scores AS (
+    SELECT
+        id, age, gender, income,
+        membership_years, purchase_frequency,
+        last_purchase_amount, preferred_category,
+        spending_score,
+        NTILE(3) OVER (ORDER BY membership_years DESC) AS r_score,
+        NTILE(3) OVER (ORDER BY purchase_frequency ASC) AS f_score,
+        NTILE(3) OVER (ORDER BY last_purchase_amount ASC) AS m_score
+    FROM customers
+),
+
+-- 5B: Composite RFM score and value tier
+
+rfm_segments AS (
+    SELECT *,
+        (r_score + f_score + m_score) AS rfm_total,
+        CASE
+            WHEN (r_score + f_score + m_score) &gt;= 7 THEN 'High Value'
+            WHEN (r_score + f_score + m_score) &gt;= 5 THEN 'Mid Value'
+            ELSE 'Low Value'
+        END AS rfm_segment
+    FROM rfm_scores
+)
+
+-- 5C: Segment-level KPIs
+
+SELECT
+    rfm_segment,
+    COUNT(*)                              AS customer_count,
+    ROUND(AVG(income), 2)                 AS avg_income,
+    ROUND(AVG(spending_score), 1)         AS avg_spending_score,
+    ROUND(AVG(purchase_frequency), 1)     AS avg_purchase_freq,
+    ROUND(AVG(last_purchase_amount), 2)   AS avg_last_purchase,
+    ROUND(AVG(membership_years), 1)       AS avg_membership_years
+FROM rfm_segments
+GROUP BY rfm_segment
+ORDER BY
+    CASE rfm_segment
+        WHEN 'High Value' THEN 1
+        WHEN 'Mid Value'  THEN 2
+        ELSE 3
+    END;
+
+-- 5E: RFM segment x category heatmap data
+
+WITH rfm_scores AS (
+    SELECT *,
+        NTILE(3) OVER (ORDER BY membership_years DESC)   AS r_score,
+        NTILE(3) OVER (ORDER BY purchase_frequency ASC)  AS f_score,
+        NTILE(3) OVER (ORDER BY last_purchase_amount ASC) AS m_score
+    FROM customers
+),
+rfm_segments AS (
+    SELECT *,
+        CASE
+            WHEN (r_score + f_score + m_score) &gt;= 7 THEN 'High Value'
+            WHEN (r_score + f_score + m_score) &gt;= 5 THEN 'Mid Value'
+            ELSE 'Low Value'
+        END AS rfm_segment
+    FROM rfm_scores
+)
+SELECT
+    rfm_segment, preferred_category,
+    COUNT(*)                            AS customer_count,
+    ROUND(AVG(last_purchase_amount), 2) AS avg_order_value,
+    ROUND(AVG(purchase_frequency), 1)   AS avg_freq
+FROM rfm_segments
+GROUP BY rfm_segment, preferred_category
+ORDER BY
+    CASE rfm_segment
+        WHEN 'High Value' THEN 1
+        WHEN 'Mid Value'  THEN 2
+        ELSE 3
+    END,
+    customer_count DESC;</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ APPROACH ============ -->
+  <section id="approach">
+    <div class="container">
+      <p class="section-label">Methodology</p>
+      <h2 class="section-title">Column Mapping Approach</h2>
+      <p class="section-desc">Since this dataset lacks traditional web analytics fields, several analyses use creative proxies to apply marketing analytics frameworks.</p>
+      <div class="approach-grid">
+        <div class="approach-card">
+          <h4>Acquisition Channel</h4>
+          <p><code>preferred_category</code> serves as the channel that "acquired" each customer.</p>
+        </div>
+        <div class="approach-card">
+          <h4>Cohort / Recency</h4>
+          <p><code>membership_years</code> serves as the cohort and recency dimension.</p>
+        </div>
+        <div class="approach-card">
+          <h4>Funnel Stages</h4>
+          <p><code>spending_score</code> thresholds model funnel progression from awareness to high-value.</p>
+        </div>
+        <div class="approach-card">
+          <h4>Campaign Tiers</h4>
+          <p><code>income</code> quartiles via NTILE simulate campaign-tier targeting.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="container">
+      <p>Built with SQLite &middot; Visualized in Tableau Public</p>
+      <div class="footer-links">
+        <!-- TODO: Replace these with your real links -->
+        <a href="https://github.com/YOUR_GITHUB_USERNAME" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://linkedin.com/in/YOUR_LINKEDIN" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="mailto:YOUR_EMAIL@example.com">Email</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+  <script>
+    function toggleSQL(btn) {
+      btn.classList.toggle('open');
+      const body = btn.nextElementSibling;
+      body.classList.toggle('open');
+    }
+  </script>
+</body>
+</html>
