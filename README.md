@@ -3,7 +3,7 @@
 Five SQL analyses built on the **Customer Segmentation Data for Marketing Analysis** dataset, designed to demonstrate skills relevant to growth marketing and marketing analysis roles.
 
 <!-- TODO: Uncomment and update these links after deploying -->
-<!-- **[Live Site](https://YOUR_GITHUB_USERNAME.github.io/sql-marketing-portfolio/)** · **[Tableau Dashboard](PASTE_YOUR_TABLEAU_PUBLIC_URL_HERE)** -->
+<!-- **[Live Site](https://nix415.github.io/sql-marketing-portfolio/)** · **[Tableau Dashboard](PASTE_YOUR_TABLEAU_PUBLIC_URL_HERE)** -->
 
 ## Dataset
 
