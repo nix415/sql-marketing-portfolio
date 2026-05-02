@@ -11,8 +11,25 @@
 </head>
 <body>
 
-  <!-- ============ HERO ============ -->
-  <section class="hero">
+  <!-- ============ NAVBAR ============ -->
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="#overview" class="nav-brand">SQL <span class="accent">Marketing</span></a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#overview">Overview</a>
+        <a href="#analyses">Analyses</a>
+        <a href="#dashboard">Dashboard</a>
+        <a href="#methodology">Methodology</a>
+        <a href="#about">About</a>
+      </nav>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" onclick="toggleNav(this)">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ HERO / OVERVIEW ============ -->
+  <section class="hero" id="overview">
     <div class="container">
       <div class="hero-inner">
         <span class="badge">Portfolio Project</span>
@@ -21,7 +38,7 @@
         <div class="hero-links">
           <a href="#analyses" class="btn-primary">View Analyses</a>
           <!-- TODO: Replace with your Tableau Public profile URL -->
-          <a href="PASTE_YOUR_TABLEAU_PUBLIC_URL_HERE" class="btn-outline" target="_blank" rel="noopener">Tableau Dashboard</a>
+          <a href="#dashboard" class="btn-outline">Tableau Dashboard</a>
           <a href="https://github.com/nix415/sql-marketing-portfolio" class="btn-outline" target="_blank" rel="noopener">GitHub Repo</a>
         </div>
       </div>
@@ -581,8 +598,24 @@ ORDER BY
     </div>
   </section>
 
-  <!-- ============ APPROACH ============ -->
-  <section id="approach">
+  <!-- ============ DASHBOARD ============ -->
+  <section id="dashboard">
+    <div class="container">
+      <p class="section-label">Dashboard</p>
+      <h2 class="section-title">Interactive Tableau Dashboard</h2>
+      <p class="section-desc">A consolidated view of every analysis above — filterable by category, age group, gender, and cohort year.</p>
+      <div class="tableau-embed dashboard-embed">
+        <!--
+          TODO: Replace placeholder with your full Tableau dashboard embed.
+          Example: <iframe src="https://public.tableau.com/views/YOUR_WORKBOOK/Dashboard1?:embed=y&:display_count=no"></iframe>
+        -->
+        <div class="placeholder"><span>📊</span>Embed your Tableau Public dashboard here</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ METHODOLOGY ============ -->
+  <section id="methodology">
     <div class="container">
       <p class="section-label">Methodology</p>
       <h2 class="section-title">Column Mapping Approach</h2>
@@ -603,6 +636,29 @@ ORDER BY
         <div class="approach-card">
           <h4>Campaign Tiers</h4>
           <p><code>income</code> quartiles via NTILE simulate campaign-tier targeting.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ABOUT ============ -->
+  <section id="about">
+    <div class="container">
+      <p class="section-label">About</p>
+      <h2 class="section-title">About This Project</h2>
+      <p class="section-desc">A portfolio showcase combining SQL analytics with marketing storytelling — built to demonstrate the kind of analytical thinking used on growth and marketing analytics teams.</p>
+      <div class="about-grid">
+        <div class="about-card">
+          <h4>Tech Stack</h4>
+          <p>SQLite via DB Browser for SQLite, Tableau Public for visualization, and a static HTML/CSS frontend hosted on GitHub Pages.</p>
+        </div>
+        <div class="about-card">
+          <h4>Skills Demonstrated</h4>
+          <p>CTEs, window functions (NTILE, ROW_NUMBER), conditional aggregation, cohort analysis, RFM segmentation, and funnel modeling.</p>
+        </div>
+        <div class="about-card">
+          <h4>Get In Touch</h4>
+          <p>Open to growth and marketing analytics roles. Reach out on the links below.</p>
         </div>
       </div>
     </div>
@@ -629,6 +685,53 @@ ORDER BY
       const body = btn.nextElementSibling;
       body.classList.toggle('open');
     }
+
+    function toggleNav(btn) {
+      const links = document.querySelector('.nav-links');
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      btn.classList.toggle('open');
+      links.classList.toggle('open');
+    }
+
+    // Shadow on navbar after scroll
+    const navbar = document.getElementById('navbar');
+    const onScroll = () => {
+      if (window.scrollY > 8) navbar.classList.add('scrolled');
+      else navbar.classList.remove('scrolled');
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    // Highlight current section in nav
+    const sections = ['overview', 'analyses', 'dashboard', 'methodology', 'about']
+      .map(id => document.getElementById(id))
+      .filter(Boolean);
+    const navAnchors = document.querySelectorAll('.nav-links a');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          navAnchors.forEach(a => {
+            a.classList.toggle('active', a.getAttribute('href') === `#${id}`);
+          });
+        }
+      });
+    }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+
+    sections.forEach(s => observer.observe(s));
+
+    // Close mobile nav after clicking a link
+    navAnchors.forEach(a => a.addEventListener('click', () => {
+      const links = document.querySelector('.nav-links');
+      const btn = document.querySelector('.nav-toggle');
+      if (links.classList.contains('open')) {
+        links.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    }));
   </script>
 </body>
 </html>
